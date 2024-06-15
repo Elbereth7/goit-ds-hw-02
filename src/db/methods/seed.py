@@ -3,41 +3,51 @@ from random import randint
 import sqlite3
 import db.queries.insert as insert
 
-def generate_fake_data(number_users, number_tasks) -> tuple():
-    fake_users = []# тут зберігатимемо користувачів
-    fake_tasks = []# тут зберігатимемо завдання
-    
-    '''Візьмемо три компанії з faker і помістимо їх у потрібну змінну'''
+
+def generate_fake_data(number_users: int, number_tasks: int) -> tuple():
+    """
+    Generating fake data for users and tasks tables using Faker
+    :param number_users: number of users that we would like to create
+    :param number_tasks: number of tasks that we would like to create
+    :return: tuple of lists (fake users list and fake tasks list)
+    """
+    fake_users = []
+    fake_tasks = []
+
     fake_data = Faker()
 
-    # Створимо набір користувачів у кількості number_users
+    # Generate number_users fake users tuples and add them to the list
     for _ in range(number_users):
         fake_users.append((fake_data.name(), fake_data.email()))
 
-    # Згенеруємо тепер number_employees кількість співробітників'''
+    # Generate number_tasks fake tasks tuples and add them to the list
     for _ in range(number_tasks):
-        fake_tasks.append((fake_data.catch_phrase(), fake_data.paragraph(nb_sentences=3)))
+        fake_tasks.append(
+            (fake_data.catch_phrase(), fake_data.paragraph(nb_sentences=3))
+        )
 
     return fake_users, fake_tasks
 
+
 def prepare_data(users, tasks) -> tuple():
+    """
+    Generating fake data for users and tasks tables using Faker
+    :param users: users list
+    :param tasks: tasks list
+    :return: tuple of lists (data to be inserted to the DB users table and and data to be inserted to the DB tasks table)
+    """
     for_users = []
-    # Готуємо список кортежів назв компаній
     for user in users:
         for_users.append(user)
 
-    for_tasks = []  # для таблиці employees
+    for_tasks = []
 
     for task in tasks:
         """
-        Для записів у таблицю співробітників нам потрібно додати посаду та id компанії. Компаній у нас було за замовчуванням
-        NUMBER_COMPANIES, при створенні таблиці companies для поля id ми вказували INTEGER AUTOINCREMENT - тому кожен
-        запис отримуватиме послідовне число, збільшене на 1, починаючи з 1. Тому компанію вибираємо випадково
-        у цьому діапазоні
-        title VARCHAR(100),
-    description TEXT,
-    status_id INTEGER,
-    user_id INTEGER,
+        For field status_id in tasks table we are choosing random number in range (1, 3) which is corresponding 
+        to one of the possible status values (new, in progress, completed).
+        For field user_id in tasks table we are choosing  in range (1, qty of users).
+        Adding these fields values to the tuple of generated fake data.
         """
         for_tasks.append(task + (randint(1, 3), randint(1, len(for_users))))
 
@@ -45,25 +55,34 @@ def prepare_data(users, tasks) -> tuple():
 
 
 def insert_data_to_db(users, tasks) -> None:
-    # Створимо з'єднання з нашою БД та отримаємо об'єкт курсора для маніпуляцій з даними
 
+    # Create DB connection and cursor object
     with sqlite3.connect("tasks.db") as con:
 
         cur = con.cursor()
 
-        """Для вставлення відразу всіх даних скористаємося методом executemany курсора. Першим параметром буде текст
-        скрипту, а другим - дані (список кортежів)."""
-
+        """
+        Inserting all users' data to DB users table
+        :insert.to_users_query: SQL query
+        :users: list of tuples with users' data
+        """
         cur.executemany(insert.to_users_query, users)
 
-        # Дані були підготовлені заздалегідь, тому просто передаємо їх у функцію
-
+        """
+        Inserting all tasks' data to DB tasks table
+        :insert.to_tasks_query: SQL query
+        :tasks: list of tuples with tasks' data
+        """
         cur.executemany(insert.to_tasks_query, tasks)
 
-        # Вставляємо дані про зарплати
         statuses = [("new",), ("in progress",), ("completed",)]
+
+        """
+        Inserting all statuses' data to DB status table
+        :insert.to_status_query: SQL query
+        :statuses: list of tuples with statuses' data
+        """
         cur.executemany(insert.to_status_query, statuses)
 
-        # Фіксуємо наші зміни в БД
-
+        # Commit the DB changes
         con.commit()

@@ -1,3 +1,6 @@
+-- Enable foreign key constraints
+PRAGMA foreign_keys = ON;
+
 -- Table: users
 DROP TABLE IF EXISTS users;
 
